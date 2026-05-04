@@ -201,3 +201,7 @@ rm ~/.claude/statusline.sh
 ```
 
 To remove the agent-type cache too: `rm ~/.claude/.statusline-agents.tsv`.
+
+## License
+
+[The Unlicense](LICENSE) — public domain. Do whatever you want with it.
