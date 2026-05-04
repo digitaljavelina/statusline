@@ -11,7 +11,7 @@ Renders, in order:
 - **cwd** — current directory (tilde-collapsed)
 - **⌥ branch** — git branch with green `+N` adds and red `-N` deletions vs `HEAD`
 - **model** — current Claude model
-- **ctx %** — context window usage with an 8-cell bar (green <75 · yellow 75–89 · red ≥90)
+- **ctx %** — context window usage with an 8-cell bar (green <41 · yellow 41–65 · red ≥66)
 - **5h %** — 5-hour rate-limit usage; the label flips to the local reset time (`5:30pm`) when known
 - **◆ N** — count of active subagents, with deduped agent-type names
 - **output style** — appended only when not `default`
@@ -136,8 +136,8 @@ The display dedupes and counts: `code-reviewer, explore×3` for one reviewer plu
 ```bash
 threshold_color() {
   local n=$(printf '%.0f' "${1:-0}")
-  if   (( n >= 90 )); then printf '31'   # red
-  elif (( n >= 75 )); then printf '33'   # yellow
+  if   (( n >= 66 )); then printf '31'   # red
+  elif (( n >= 41 )); then printf '33'   # yellow
   else                     printf '32'   # green
   fi
 }

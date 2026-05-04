@@ -46,12 +46,12 @@ ansi()  { printf '\033[%sm%s\033[0m' "$1" "$2"; }
 dim()   { ansi 2 "$1"; }
 sep()   { dim ' · '; }
 
-# Threshold color for usage bars: green <75, yellow 75-89, red >=90
+# Threshold color for usage bars: green <41, yellow 41-65, red >=66
 threshold_color() {
   local n
   n=$(printf '%.0f' "${1:-0}")
-  if   (( n >= 90 )); then printf '31'
-  elif (( n >= 75 )); then printf '33'
+  if   (( n >= 66 )); then printf '31'
+  elif (( n >= 41 )); then printf '33'
   else                     printf '32'
   fi
 }
