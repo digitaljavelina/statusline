@@ -11,7 +11,10 @@ Renders, in order:
 - **cwd** — current directory (tilde-collapsed)
 - **⌥ branch** — git branch with green `+N` adds and red `-N` deletions vs `HEAD`
 - **model** — current Claude model
-- **ctx %** — context window usage with an 8-cell bar (green <41 · yellow 41–65 · red ≥66)
+- **ctx %** — context window usage with an 8-cell bar:
+  - 🟢 `██░░░░░░ 25%` — green when `<41`
+  - 🟡 `████░░░░ 50%` — yellow when `41–65`
+  - 🔴 `██████░░ 80%` — red when `≥66`
 - **5h %** — 5-hour rate-limit usage; the label flips to the local reset time (`5:30pm`) when known
 - **◆ N** — count of active subagents, with deduped agent-type names
 - **output style** — appended only when not `default`
@@ -142,6 +145,16 @@ threshold_color() {
   fi
 }
 ```
+
+How that maps to bars at representative percentages within each band:
+
+| range   | example                             | meaning                             |
+| ------- | ----------------------------------- | ----------------------------------- |
+| `<41`   | 🟢 `█░░░░░░░ 10%` · `███░░░░░ 40%`  | plenty of headroom                  |
+| `41–65` | 🟡 `███░░░░░ 41%` · `█████░░░ 65%`  | warning band — start watching       |
+| `≥66`   | 🔴 `█████░░░ 66%` · `████████ 100%` | act soon (compact, /clear, or wait) |
+
+> [!note] At the boundaries (40↔41, 65↔66) the bar's fill width is identical — only the color flips. That's intentional: 1% changes shouldn't shift the visual fill, but they should shift the _signal_.
 
 The 8-cell bar is built with `awk` doing the float math (`filled = pct * width / 100`, rounded), then `█` and `░` characters concatenated in a `while` loop. Bash 3.2 doesn't have `printf -v` for repeated chars, so the loop is portable across both macOS and Linux variants.
 
