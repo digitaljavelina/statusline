@@ -18,13 +18,18 @@ ansi()  { printf '\033[%sm%s\033[0m' "$1" "$2"; }
 dim()   { ansi 2 "$1"; }
 sep()   { dim ' · '; }
 
-# Threshold color for usage bars: green <41, yellow 41-65, red >=66
+# Threshold color for usage bars. Defaults match the context-window bands
+# (green <41, yellow 41-65, red >=66) — aggressive because hitting the
+# ceiling forces /compact or /clear. Pass explicit thresholds for bars
+# whose limit auto-resets (e.g. 5h rate limit → 75/90).
 threshold_color() {
-  local n
+  local n yellow_at red_at
   n=$(printf '%.0f' "${1:-0}")
-  if   (( n >= 66 )); then printf '31'
-  elif (( n >= 41 )); then printf '33'
-  else                     printf '32'
+  yellow_at="${2:-41}"
+  red_at="${3:-66}"
+  if   (( n >= red_at ))    ; then printf '31'
+  elif (( n >= yellow_at )) ; then printf '33'
+  else                             printf '32'
   fi
 }
 
@@ -173,7 +178,7 @@ if [[ -n "${ctx_pct_raw:-}" ]]; then
   out+="$(sep)$(dim "ctx ")$(ansi "$c" "$(bar "$ctx_pct_raw") $ctx_pct")"
 fi
 if [[ -n "${five_h_pct:-}" ]]; then
-  c="$(threshold_color "$five_h_pct")"
+  c="$(threshold_color "$five_h_pct" 75 90)"
   out+="$(sep)$(dim "$five_h_label ")$(ansi "$c" "$(bar "$five_h_pct") $(printf '%.0f' "$five_h_pct")%")"
 fi
 if [[ -n "${active_agents:-}" ]]; then

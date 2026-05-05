@@ -11,11 +11,14 @@ Renders, in order:
 - **cwd** — current directory (tilde-collapsed)
 - **⌥ branch** — git branch with green `+N` adds and red `-N` deletions vs `HEAD`
 - **model** — current Claude model
-- **ctx %** — context window usage with an 8-cell bar:
+- **ctx %** — context window usage with an 8-cell bar. Aggressive thresholds because hitting the ceiling forces `/compact` or `/clear`:
   - 🟢 `██░░░░░░ 25%` — green when `<41`
   - 🟡 `████░░░░ 50%` — yellow when `41–65`
   - 🔴 `██████░░ 80%` — red when `≥66`
-- **5h %** — 5-hour rate-limit usage; the label flips to the local reset time (`5:30pm`) when known
+- **5h %** — 5-hour rate-limit usage; label flips to the local reset time (`5:30pm`) when known. Relaxed thresholds because the limit auto-resets — this is awareness, not a wall to avoid:
+  - 🟢 `█████░░░ 60%` — green when `<75`
+  - 🟡 `███████░ 85%` — yellow when `75–89`
+  - 🔴 `████████ 95%` — red when `≥90`
 - **◆ N** — count of active subagents, with deduped agent-type names
 - **output style** — appended only when not `default`
 
@@ -136,25 +139,43 @@ The display dedupes and counts: `code-reviewer, explore×3` for one reviewer plu
 
 ### Threshold colors and the progress bar
 
+`threshold_color` is a single function with optional override args, so each bar can pick its own warning bands:
+
 ```bash
 threshold_color() {
-  local n=$(printf '%.0f' "${1:-0}")
-  if   (( n >= 66 )); then printf '31'   # red
-  elif (( n >= 41 )); then printf '33'   # yellow
-  else                     printf '32'   # green
+  local n yellow_at red_at
+  n=$(printf '%.0f' "${1:-0}")
+  yellow_at="${2:-41}"
+  red_at="${3:-66}"
+  if   (( n >= red_at ))    ; then printf '31'   # red
+  elif (( n >= yellow_at )) ; then printf '33'   # yellow
+  else                             printf '32'   # green
   fi
 }
+
+# Default (ctx) — aggressive: act before you hit the ceiling
+threshold_color "$ctx_pct_raw"
+
+# 5h rate limit — relaxed: it auto-resets, so this is awareness only
+threshold_color "$five_h_pct" 75 90
 ```
 
-How that maps to bars at representative percentages within each band:
+The two bars use different bands on purpose:
 
-| range   | example                             | meaning                             |
-| ------- | ----------------------------------- | ----------------------------------- |
-| `<41`   | 🟢 `█░░░░░░░ 10%` · `███░░░░░ 40%`  | plenty of headroom                  |
-| `41–65` | 🟡 `███░░░░░ 41%` · `█████░░░ 65%`  | warning band — start watching       |
-| `≥66`   | 🔴 `█████░░░ 66%` · `████████ 100%` | act soon (compact, /clear, or wait) |
+| bar     | green | yellow  | red   | rationale                                                                                                               |
+| ------- | ----- | ------- | ----- | ----------------------------------------------------------------------------------------------------------------------- |
+| **ctx** | `<41` | `41–65` | `≥66` | Hard ceiling — once you fill it, you have to `/compact` or `/clear`. Earlier warning bands give you room to plan ahead. |
+| **5h**  | `<75` | `75–89` | `≥90` | Auto-resets when the limit window closes. No action required — just useful to know how close you are.                   |
 
-> [!note] At the boundaries (40↔41, 65↔66) the bar's fill width is identical — only the color flips. That's intentional: 1% changes shouldn't shift the visual fill, but they should shift the _signal_.
+Visual examples within each band:
+
+| ctx range | example                             |     | 5h range | example                             |
+| --------- | ----------------------------------- | --- | -------- | ----------------------------------- |
+| `<41`     | 🟢 `█░░░░░░░ 10%` · `███░░░░░ 40%`  |     | `<75`    | 🟢 `███░░░░░ 40%` · `█████░░░ 70%`  |
+| `41–65`   | 🟡 `███░░░░░ 41%` · `█████░░░ 65%`  |     | `75–89`  | 🟡 `██████░░ 75%` · `███████░ 89%`  |
+| `≥66`     | 🔴 `█████░░░ 66%` · `████████ 100%` |     | `≥90`    | 🔴 `███████░ 90%` · `████████ 100%` |
+
+> [!note] At the boundaries (40↔41, 65↔66 for ctx; 74↔75, 89↔90 for 5h) the bar's fill width is identical — only the color flips. That's intentional: 1% changes shouldn't shift the visual fill, but they should shift the _signal_.
 
 The 8-cell bar is built with `awk` doing the float math (`filled = pct * width / 100`, rounded), then `█` and `░` characters concatenated in a `while` loop. Bash 3.2 doesn't have `printf -v` for repeated chars, so the loop is portable across both macOS and Linux variants.
 
