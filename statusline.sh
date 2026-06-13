@@ -47,6 +47,7 @@ bar() {
 # Fields
 cwd="$(printf '%s' "$input"       | jq -r '.workspace.current_dir // .cwd // ""')"
 model="$(printf '%s' "$input"     | jq -r '.model.display_name // .model.id // ""')"
+model="${model%% (*}"  # drop trailing parenthetical, e.g. "Opus 4.8 (1M context)" -> "Opus 4.8"
 style="$(printf '%s' "$input"     | jq -r '.output_style.name // ""')"
 ctx_pct_raw="$(printf '%s' "$input"   | jq -r '.context_window.used_percentage // empty')"
 five_h_pct="$(printf '%s' "$input"    | jq -r '.rate_limits.five_hour.used_percentage // empty')"
@@ -129,14 +130,15 @@ if [[ -n "${cwd:-}" ]]; then
   fi
 fi
 
-# Display cwd: full tilde-collapsed path. Canonicalize iCloud Obsidian
-# vault to ~/Obsidian (same data, two filesystem views).
+# Display cwd: just the project folder name. Full paths overflow narrow
+# terminals; the basename is enough to orient. Canonicalize iCloud Obsidian
+# vault first so its root shows as "Obsidian" rather than "Documents".
 display_cwd="$cwd"
 icloud_obsidian="$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents"
 if [[ "$display_cwd" == "$icloud_obsidian"* ]]; then
   display_cwd="$HOME/Obsidian${display_cwd#$icloud_obsidian}"
 fi
-display_cwd="${display_cwd/#$HOME/~}"
+display_cwd="${display_cwd##*/}"
 
 # Git: branch + diff stats. The +/- counts already imply dirty, so no `*` marker.
 branch=""
@@ -145,6 +147,8 @@ git_dels=""
 if [[ -n "${cwd:-}" ]] && git -C "$cwd" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   branch="$(git -C "$cwd" symbolic-ref --short HEAD 2>/dev/null \
             || git -C "$cwd" rev-parse --short HEAD 2>/dev/null)"
+  # Cap long branch names so they don't overflow narrow terminals.
+  (( ${#branch} > 20 )) && branch="${branch:0:20}…"
   # Capture line additions/deletions vs HEAD (working tree + index combined)
   _shortstat="$(git -C "$cwd" diff --shortstat HEAD 2>/dev/null)"
   if [[ -n "$_shortstat" ]]; then
