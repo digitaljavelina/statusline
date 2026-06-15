@@ -5,12 +5,25 @@
 
 set -u
 
-# Terminal width — only `stty size </dev/tty` is reliable here. `tput cols`
-# defaults to 80 when $TERM isn't propagated to the subprocess, and bash
-# doesn't export $COLUMNS. Fall back to "wide" (200) when no tty present.
-# Override with $STATUSLINE_COLS for testing or to force compact mode.
-cols="${STATUSLINE_COLS:-$({ stty size </dev/tty | awk '{print $2}'; } 2>/dev/null)}"
+# Terminal width. Claude Code runs the statusline as a subprocess with no
+# usable controlling terminal, so `stty size </dev/tty` fails and bash doesn't
+# export $COLUMNS — leaving us blind to the real width. The reliable source is
+# the multiplexer: when running inside tmux, ask the server for the actual pane
+# width (works without a tty, since tmux is a separate process). Fall back to
+# stty, then to "wide" (200) only when nothing else answers.
+# Override with $STATUSLINE_COLS for testing or to force a width.
+cols="${STATUSLINE_COLS:-}"
+if [[ -z "$cols" && -n "${TMUX:-}" ]]; then
+  if [[ -n "${TMUX_PANE:-}" ]]; then
+    cols="$(tmux display-message -t "$TMUX_PANE" -p '#{pane_width}' 2>/dev/null)"
+  else
+    cols="$(tmux display-message -p '#{pane_width}' 2>/dev/null)"
+  fi
+fi
+[[ -z "$cols" ]] && cols="$({ stty size </dev/tty | awk '{print $2}'; } 2>/dev/null)"
 cols="${cols:-200}"
+# Guard against non-numeric results from any of the sources above.
+[[ "$cols" =~ ^[0-9]+$ ]] || cols=200
 
 # Progressive-disclosure tiers — what gets shown at each width.
 # Reference widths: phone-portrait ~40-55 · phone-landscape ~70-90
