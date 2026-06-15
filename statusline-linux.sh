@@ -95,6 +95,11 @@ if [[ -z "$cwd" && -z "$model" ]]; then
   five_h_resets="$(printf '%s' "$_scrubbed" | jq -r '.rate_limits.five_hour.resets_at // empty' 2>/dev/null)"
 fi
 
+# Drop the trailing model parenthetical, e.g. "Opus 4.8 (1M context)" -> "Opus 4.8".
+# The suffix eats ~13 chars and overflows narrow (phone) widths; the base name
+# is enough to orient. Matches the macOS statusline's behavior.
+model="${model%% (*}"
+
 # Format reset epoch to local "5:30pm" / "9am" (drops :00 on the hour).
 # Server is typically UTC; we want the *user's* local TZ. Defaults to the
 # system TZ; override with $STATUSLINE_TZ when SSHing from another TZ
@@ -219,6 +224,8 @@ git_dels=""
 if [[ -n "${cwd:-}" ]] && git -C "$cwd" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   branch="$(git -C "$cwd" symbolic-ref --short HEAD 2>/dev/null \
             || git -C "$cwd" rev-parse --short HEAD 2>/dev/null)"
+  # Cap long branch names so they don't overflow narrow (phone) widths.
+  (( ${#branch} > 20 )) && branch="${branch:0:20}…"
   _shortstat="$(git -C "$cwd" diff --shortstat HEAD 2>/dev/null)"
   if [[ -n "$_shortstat" ]]; then
     _adds="$(printf '%s' "$_shortstat" | grep -oE '[0-9]+ insertion' | grep -oE '[0-9]+')"
