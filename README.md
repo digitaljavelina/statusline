@@ -2,7 +2,7 @@
 
 A minimal, information-dense statusline for [Claude Code](https://claude.com/claude-code) that fits on a phone over SSH and scales up to a wide laptop terminal.
 
-The full walkthrough, with every field the statusline JSON gives you, is at [How to Build Your Own Claude Code Statusline From Scratch](https://digitaljavelina.com/how-to-build-your-own-claude-code-statusline-from-scratch/).
+A step-by-step walkthrough of how this statusline is built is at [How to Build Your Own Claude Code Statusline From Scratch](https://digitaljavelina.com/how-to-build-your-own-claude-code-statusline-from-scratch/).
 
 ```
 ~/code/statusline · ⌥ main +12 -3 · Opus 4.7 · ctx ███░░░░░ 42% · 5:30pm █░░░░░░░ 18% · ◆ 2 code-reviewer, explore
